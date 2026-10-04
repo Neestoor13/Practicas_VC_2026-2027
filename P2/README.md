@@ -87,7 +87,7 @@ plt.show()
 
 </div>
 
-Una vez se ha obtenido la gráfica con el conteo de las filas, se procederá a dibujar con una primitiva gráfica (cv2.line) aquellas que superan el umbral establecido en el enunciado práctica, en este caso de 0.90*maxrows_canny. A continuación, se muestra el código que realiza esta función.
+Una vez se ha obtenido la gráfica con el conteo de las filas, se procederá a dibujar con una primitiva gráfica (cv2.line) aquellas que superan el umbral establecido en el enunciado de la práctica, en este caso de 0.90*maxrows_canny. A continuación, se muestra el código que realiza esta función.
 
 ```
 maxrows_canny = np.max(white_pixels_per_row)
@@ -409,5 +409,86 @@ Tal y como se puede apreciar en las comparativas obtenidas, la situación tanto 
 Para el caso de la imagen procesada con Sobel, se puede notar como existe una mayor presencia de filas por encima del umbral establecido. En cambio, para el caso de las columnas se observa lo contrario: tras realizar la ejecución de Canny se ha obtenido un mayor número de columnas que superan el umbral.
 
 ## Tarea 3
+
+En esta tarea se propone implementar un demostrador que esté inspirado en alguno de los siguientes vídeos:
+
+- [My little piece of privacy](https://www.niklasroy.com/project/88/my-little-piece-of-privacy)
+- [Messa di voce](https://youtu.be/GfoqiyB1ndE?feature=shared)
+- [Virtual air guitar](https://youtu.be/FIAmyoEpV5c?feature=shared)
+
+Para la correcta compleción de la misma, se ha tomado como referencia [Messa di voce](https://youtu.be/GfoqiyB1ndE?feature=shared).
+
+<div align="center">
+
+![Extracto de Messa di voce](images/messa_di_voce.gif)
+
+</div>
+
+A partir de esta referencia y aprovechando el umbralizado que se proporcionaba en el guión práctico, se ha implementado una propuesta en la que, cuando la cámara detecta movimiento en la escena, se generan burbujas en la misma. 
+
+De esta forma, se trata de imitar de manera similar la aparición de burbujas con el movimiento en lugar de con el sonido.
+
+```
+vid = cv2.VideoCapture(0)
+
+# Fondo
+# Inicializa la sustracción del fondo con mezcla de gaussianas y detección de sombras
+eliminadorFondo = cv2.createBackgroundSubtractorMOG2(history=100, varThreshold=50, detectShadows=True)
+
+# Cada burbuja es una lista: [x, y, radio, velocidad]
+burbujas = []
+
+while(True):
+    # fotograma a fotograma
+    ret, frame = vid.read()
+
+    if ret:
+        # Aplica efecto espejo sobre la entrada
+        framem = cv2.flip(frame, 1)
+
+        # Máscara de movimiento (255 = movimiento, 127 = sombra)
+        objetos = eliminadorFondo.apply(framem)
+
+        # Umbralizado: las sombras (127) pasan a 0 y el movimiento real queda en 255
+        _, umbral = cv2.threshold(objetos, 200, 255, cv2.THRESH_BINARY)
+
+        # Coordenadas de los píxeles en movimiento
+        ys, xs = np.where(umbral == 255)
+
+        # Si hay movimiento, crea burbujas en puntos al azar de la máscara
+        if len(xs) > 300:
+            for i in range(3):
+                n = random.randrange(len(xs))
+                burbujas.append([xs[n], ys[n], random.randint(8, 30), random.randint(1, 4)])
+
+        # Mueve y dibuja las burbujas
+        for b in burbujas:
+            b[1] -= b[3]    # sube
+            b[0] += random.randint(-2, 2)    # se balancea
+            cv2.circle(framem, (int(b[0]), int(b[1])), b[2], (255, 255, 200), 2)
+
+        # Elimina las burbujas que salen por arriba
+        burbujas = [b for b in burbujas if b[1] > 0]
+
+        # Muestra resultado
+        cv2.imshow('Fotograma', framem)
+        # Muestra el umbralizado
+        cv2.imshow('Umbralizado', umbral)
+
+    # Detenemos pulsado ESC
+    if cv2.waitKey(20) == 27:
+        break
+
+# Libera el objeto de captura
+vid.release()
+# Destruye ventanas
+cv2.destroyAllWindows()
+```
+
+<div align="center">
+
+![Demostrador inspirado en Messa di Voce](images/nombre_gif.gif)
+
+</div>
 
 ## Fuentes consultadas
