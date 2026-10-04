@@ -1,4 +1,6 @@
-## Índice
+# Práctica 2. Funciones básicas de OpenCV
+
+## Tabla de contenidos
 - [Introducción](#introduccion)
 - [Pasos previos](#pasos-previos)
 - [Tarea 1](#tarea-1)
@@ -8,12 +10,44 @@
 
 ## Introducción
 
-En el cuaderno VC_P2 correspondiente a la segunda práctica de la asignatura se proponen una serie de tareas que deben ser completadas. A continuación, se presenta una explicación de las distintas tareas propuestas y como se han resuelto para completarlas con éxito.
+En el cuaderno VC_P2 correspondiente a la [segunda práctica de la asignatura](https://github.com/otsedom/otsedom.github.io/tree/main/VC/P2) se proponen una serie de tareas que deben ser completadas. A continuación, se presenta una explicación de las distintas tareas propuestas y como se han resuelto para completarlas con éxito.
+
+## Pasos previos
+
+Para la correcta ejecución del cuaderno, se deberá hacer uso de un _environment_ concreto. En esta ocasión, se usará el mismo _environment_ (VC_P1) que se configuró para la práctica anterior.
 
 ## Tarea 1
 
 En esta tarea se plantea realizar la cuenta de píxeles blancos para las filas de la imagen del mandril, de manera análoga a como se realizó para las columnas en el guión de la práctica.
 
+Para ello, en primer lugar se ejecutará y estudiará el código proporcionado.
+
+```
+#El contenido de la imagen resultado de Canny, son valores 0 o 255, lo compruebas al descomentar
+#print(canny)
+#Cuenta el número de píxeles blancos (255) por columna
+#Suma los valores de los pixeles por columna
+col_counts = cv2.reduce(canny, 0, cv2.REDUCE_SUM, dtype=cv2.CV_32SC1)
+
+#Normaliza en base al número de filas, primer valor devuelto por shape, y al valor máximo del píxel (255)
+#El resultado será el número de píxeles blancos por columna
+cols = col_counts[0] / (255 * canny.shape[0])
+
+#Muestra dicha cuenta gráficamente
+plt.figure()
+plt.subplot(1, 2, 1)
+plt.axis("off")
+plt.title("Canny")
+plt.imshow(canny, cmap='gray') 
+
+plt.subplot(1, 2, 2)
+plt.title("Respuesta de Canny")
+plt.xlabel("Columnas")
+plt.ylabel("% píxeles")
+plt.plot(cols)
+#Rango en x definido por las columnas
+plt.xlim([0, canny.shape[1]])
+```
 
 <div align="center">
 
@@ -21,17 +55,75 @@ En esta tarea se plantea realizar la cuenta de píxeles blancos para las filas d
 
 </div>
 
+Una vez se ha comprendido el funcionamiento para las columnas, se procederá a realizar el conteo para el número de filas.
+
+```
+# Cuenta el número de píxeles blancos (255) por fila
+white_pixels_per_row = cv2.reduce(canny, 255, cv2.REDUCE_SUM, dtype=cv2.CV_32SC1)
+
+# Porcentaje por fila
+percentage_per_row = white_pixels_per_row / (255 * canny.shape[1])
+
+# Muestra dicha cuenta gráficamente
+plt.subplot(1, 2, 1)
+plt.axis("off")
+plt.title("Canny")
+plt.imshow(canny, cmap="gray")
+
+plt.subplot(1, 2, 2)
+plt.title("Respuesta de Canny")
+plt.xlabel("Filas")
+plt.ylabel("% píxeles")
+plt.plot(percentage_per_row)
+# Rango en x definido por filas
+plt.xlim([0, canny.shape[0]])
+
+plt.show()
+```
+
 <div align="center">
 
 ![Gráfico número de filas Canny](images/canny_rows.png)
 
 </div>
 
+Una vez se ha obtenido la gráfica con el conteo de las filas, se procederá a dibujar con una primitiva gráfica (cv2.line) aquellas que superan el umbral establecido en el enunciado práctica, en este caso de 0.90*maxrows_canny. A continuación, se muestra el código que realiza esta función.
+
+```
+maxrows_canny = np.max(white_pixels_per_row)
+umbralrows_canny = 0.90 * maxrows_canny
+rows_sel_canny = np.where(white_pixels_per_row.flatten() > umbralrows_canny)[0]
+
+# Imagen de Canny en color (BGR) para poder dibujar en rojo
+canny_color = cv2.cvtColor(canny, cv2.COLOR_GRAY2BGR)
+for f in rows_sel_canny:
+    cv2.line(canny_color, (0, int(f)), (canny.shape[1] - 1, int(f)), (0, 0, 255), 1)
+
+# Muestra la imagen resaltada y el plot con el umbral
+plt.subplot(1, 2, 1)
+plt.axis("off")
+plt.title("Canny filas > 0.90*maxfil")
+plt.imshow(cv2.cvtColor(canny_color, cv2.COLOR_BGR2RGB))
+
+plt.subplot(1, 2, 2)
+plt.xlabel("Filas")
+plt.ylabel("% píxeles")
+plt.plot(percentage_per_row)
+plt.axhline(umbralrows_canny / (255 * canny.shape[1]), color="r", linestyle="--", label="0.90*maxfil")
+# Rango en x definido por filas
+plt.xlim([0, canny.shape[0]])
+plt.legend()
+
+plt.show()
+```
+
 <div align="center">
 
 ![Gráfico filas marcadas](images/canny_rows_marked.png)
 
 </div>
+
+De esta forma, se puede observar de una manera más simple la situación de aquellas filas que cumplen con el criterio establecido en el enunciado.
 
 ## Tarea 2
 
