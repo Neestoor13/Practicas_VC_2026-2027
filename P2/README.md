@@ -457,7 +457,7 @@ while(True):
 
         # Si hay movimiento, crea burbujas en puntos al azar de la máscara
         if len(xs) > 300:
-            for i in range(3):
+            for i in range(1):
                 n = random.randrange(len(xs))
                 burbujas.append([xs[n], ys[n], random.randint(8, 30), random.randint(1, 4)])
 
@@ -487,7 +487,7 @@ cv2.destroyAllWindows()
 
 <div align="center">
 
-![Demostrador inspirado en Messa di Voce](images/nombre_gif.gif)
+![Demostrador inspirado en Messa di Voce](images/bubbles_by_movement.gif)
 
 </div>
 
