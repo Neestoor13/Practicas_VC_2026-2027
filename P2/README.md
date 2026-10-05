@@ -492,3 +492,6 @@ cv2.destroyAllWindows()
 </div>
 
 ## Fuentes consultadas
+
+- [Documentación de OpenCV](https://docs.opencv.org/4.13.0/d6/d00/tutorial_py_root.html)
+- [Documentación de numpy](https://numpy.org/doc/stable/reference/module_structure.html)
