@@ -1,4 +1,4 @@
-# Práctica 2. Funciones básicas de OpenCV
+# Práctica 3. Funciones básicas de OpenCV
 
 ## Tabla de contenidos
 - [Introducción](#introduccion)
@@ -12,6 +12,14 @@
 En el cuaderno VC_P3 correspondiente a la [tercera práctica de la asignatura](https://github.com/otsedom/otsedom.github.io/tree/main/VC/P3) se proponen una serie de tareas que deben ser completadas. A continuación, se presenta una explicación de las distintas tareas propuestas y como se han resuelto para completarlas con éxito.
 
 ## Pasos previos
+
+Previo a la realización de las tareas, se deberá realizar cambios al entorno configurado en la práctica 1. Este cambio reside en realizar la instalación de los paquetes _scikit-learn_ y _seaborn_ tal y como se realiza a continuación.
+
+```
+pip install scikit-learn seaborn
+```
+
+Una vez completada la instalación se podrá comenzar sin inconveniente alguno la práctica.
 
 ## Tarea 1
 
