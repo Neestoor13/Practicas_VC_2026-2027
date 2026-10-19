@@ -7,6 +7,7 @@
     - [Imagen Ideal](#imagen-ideal)
     - [Detección por Webcam](#detección-por-webcam)
 - [Tarea 2](#tarea-2)
+- [Uso de la IA](#uso-de-la-ia)
 - [Fuentes consultadas](#fuentes-consultadas)
 
 ## Introducción
@@ -69,11 +70,22 @@ A continuación se procede a aplicar umbralización de Otsu para obtener una ima
 
 Por último, a partir de una moneda de referencia (en este caso, de 2 euros) se calcula la relación existente entre el diámetro y los píxeles, de tal forma que se pueda calcular el diámetro del resto de detecciones. Asimismo, se comprobará si la diferencia respecto a los diámetro establecidos en _MONEDAS_ supera el valor de _TOLERANCIA_ establecido (0.6): si la supera, se la catalogará como "?"; en caso contrario, se suma al valor total en la escena (por defecto, 0.0). Finalizada esta comprobación, se procederá al dibujado de los círculos, nombres, diámetros estimados y valores de las monedas detectadas en la escena.
 
+
 <div align="center">
 
-![Monedas con sus valores y diámetros](Calculo_valor.jpg)
+![Monedas con sus valores y diámetros](./images/coins_detected.png)
 
 </div>
+
+Tal y como se observa en la anterior imagen, se han detectado y catalogado correctamente todas las monedas. Por ello, el valor total detectado mostrado por pantalla en el programa será de un total de 3.88€.
+
+<div align="center">
+
+![Valor total detectado](./images/total_value.jpg)
+
+</div>
+
+
 
 ### Detección por webcam
 
@@ -85,7 +97,7 @@ Para el planteamiento de esta situación, se han definido distintas funciones au
 
 - Selección de referencia interactiva
 
-    La función on_mouse() se encarga de guardar las coordenadas del clic izquierdo del ratón. Con esta función, se podrá seleccionar una moneda de referencia previamente establecida (por ejemplo, 1 euro). De este modo, el código seleccionará la detección más cercana al punto seleccionado para posteriormente realizar el cálculo de la relación entre milímetros y píxeles mencionada anteriormente.
+    La función `on_mouse()` se encarga de guardar las coordenadas del clic izquierdo del ratón. Con esta función, se podrá seleccionar una moneda de referencia previamente establecida (por ejemplo, 1 euro). De este modo, el código seleccionará la detección más cercana al punto seleccionado para posteriormente realizar el cálculo de la relación entre milímetros y píxeles mencionada anteriormente.
 
     ```
     def on_mouse(evento, x, y, flags, param):
@@ -94,6 +106,11 @@ Para el planteamiento de esta situación, se han definido distintas funciones au
             clic = (x, y)
     ```
 
+<div align="center">
+
+![Selección interactiva de moneda](./images/coin_selection.jpg)
+
+</div>
 
 - Segmentación del folio
 
@@ -122,7 +139,7 @@ Para el planteamiento de esta situación, se han definido distintas funciones au
 
 - Detección
 
-    La función detectar() combina la segmentación comentada anteriormente junto con morfología, geometría y anaálsi cromático.
+    La función `detectar()` combina la segmentación comentada anteriormente junto con morfología, geometría y anaálsi cromático.
 
     Esta función se encarga de convertir el fotograma captado por la webcam a HSV para realizar un análisis del color captado. Asimismo, obtiene la máscara de las monedas haciendo uso de la función segmentar_folio comentada anteriormente, y aplica apertura morfológica y cierrepara la eliminación de pequeños residuos y cierre para cubrir posibles huecos (por ejemplo, el centro de las monedas de 1/2 euros).
 
@@ -201,7 +218,7 @@ Para el planteamiento de esta situación, se han definido distintas funciones au
     }
     ```
 
-    Una vez ha quedado esto establecido, se procederá a hablar de la función familia_color().
+    Una vez ha quedado esto establecido, se procederá a hablar de la función `familia_color()`.
 
     Tal y como ha quedado reflejado en la variable global FAMILIA, esta asigna a cada moneda la familia a la que pertenece para, a través del estudio de una región del centro de la moneda detectado en HSV, clasificar a que familia pertenece cada moneda detectada.
 
@@ -246,11 +263,16 @@ Para el planteamiento de esta situación, se han definido distintas funciones au
 
         return "cobre" if h_k < H_COBRE_MAX else "oro"
     ```
+    <div align="center">
+
+    ![Selección interactiva de moneda](./images/analisis_cromatico.jpg)
+
+    </div>
 
 
 - Seguimiento temporal
 
-    Una vez se ejecute el bucle de código encargado de la detección de las monedas, la webcam estará capturando continuamente las mismas monedas en múltiples fotogramas: esto implicada que en cada fotograma clasificado se pueden producir parpadeos en las etiquetas asociadas a las monedas. Con el fin de reducir dichos parpadeos, se ha propuesto el uso de las funciones auxiliares actualizar_tracks() y estado_track().
+    Una vez se ejecute el bucle de código encargado de la detección de las monedas, la webcam estará capturando continuamente las mismas monedas en múltiples fotogramas: esto implicada que en cada fotograma clasificado se pueden producir parpadeos en las etiquetas asociadas a las monedas. Con el fin de reducir dichos parpadeos, se ha propuesto el uso de las funciones auxiliares `actualizar_tracks()` y `estado_track()`.
 
     Para el correcto funcionamiento de estas funciones, se han declarado previamente unas variables indispensables.
 
@@ -268,16 +290,16 @@ Para el planteamiento de esta situación, se han definido distintas funciones au
     - `MAX_PERDIDOS`: establece el número de fotogramas mínimo sin ver una moneda antes de olvidarla.
     - `tracks`: se utiliza para almacenar el seguimiento de las monedas detectadas.
 
-    Para asociar cada detección de las monedas en el _frame_ con el track cuyo centro está suficientemente cerca se hará uso de la función actualizar_tracks(); si no existiera track, se creará uno nuevo. Además, es el encargado de actualizar los valores de los _tracks_ y eliminar aquellos que lleven demasiado tiempo ausentes.
-    En cambio, la función estado_track() es quién se encarga de devolver la mediana de los radios y la familia más votada.
+    Para asociar cada detección de las monedas en el _frame_ con el track cuyo centro está suficientemente cerca se hará uso de la función `actualizar_tracks()`; si no existiera track, se creará uno nuevo. Además, es el encargado de actualizar los valores de los _tracks_ y eliminar aquellos que lleven demasiado tiempo ausentes.
+    En cambio, la función `estado_track()` es quién se encarga de devolver la mediana de los radios y la familia más votada.
 
     Algo importante a clarificar es que si las monedas se cruzaran, se solaparan o se produjeran movimientos bruscos en la escena, dos _tracks_ podrían llegar a confundirse.
 
 Una vez clarificado el uso que tienen las anteriores funciones en el bucle principal de detección, se procederá a comentar el funcionamiento de este.
 
-Para hacer posible la detección, se hace uso de la función VideoCapture() que incopora OpenCV para capturar la escena de las monedas. Capturada, se invertirá el fotograma detectado y se procesará haciendo uso de la función _detectar()_.
+Para hacer posible la detección, se hace uso de la función VideoCapture() que incopora OpenCV para capturar la escena de las monedas. Capturada, se invertirá el fotograma detectado y se procesará haciendo uso de la función `detectar()`.
 
-Acto seguido, se calibrará la relación entre mílimetros y píxeles al hacer click sobre la moneda de referencia. Realizada la calibración se procederá a la actualización de los tracks (actualizar_tracks()), ignorando aquellos que aún no cumplen los requisitos mínimos.
+Acto seguido, se calibrará la relación entre mílimetros y píxeles al hacer click sobre la moneda de referencia. Realizada la calibración se procederá a la actualización de los tracks (`actualizar_tracks()`), ignorando aquellos que aún no cumplen los requisitos mínimos.
 
 A continuación, se realizará el cálculo del diámetro para las monedas detectadas según la relación establecida por la moneda de referencia. Tras esto, se procederá a comprobar que se cumple el requisito de que el diámetro nominal esté por debajo del valor de tolerancia establecido.
 
@@ -383,7 +405,289 @@ while True:
 vid.release()
 cv2.destroyAllWindows()
 ```
+
+Con la ejecución del anterior bucle de ejecución, se obtendrá el total de monedas detectadas en la escena. Como ya se mencionó anteriormente, la detección dependerá de factores como la iluminación, la posición... Para realizar las pruebas, se hizo uso de una cámara que presentaba efecto barril, por lo que la imagen tiende a deformarse.
+
+Asimismo, para la realización de las pruebas se hiizo uso del siguiente conjunto de monedas:
+- `1 euro`: 1 moneda
+- `50 céntimos`: 1 moneda
+- `20 céntimos`: 3 monedas
+- `5 céntimos`: 1 moneda
+- `2 céntimos`: 1 moneda
+- `1 céntimo`: 2 monedas
+
+ A continuación, se procede al análisis de la detección con la webcam.
+
+| Captura a 15 centímetros | Captura a 39 centímetros |
+| :---: | :---: |
+| ![Captura de escena a 15 centímetros](./images/monedas_otro_pov.gif) | ![Captura de escena a 39 centímetros](./images/monedas_no_obstaculos.gif) |
+
+Cuando se realizaba la detección se podía notar como la imagen se deformaba más que cuando se colaba en un punto fijo (en este caso, agarrada a un monitor). Por ello, se tomó la decisión de que el resto de pruebas se realizarían con la cámara posicionada en dicho lugar.
+
+Se realizaron dos pruebas: una realizada sólo con monedas y otra con monedas y objetos que se le pudieran asemejar. 
+
+Cuando se realizó con monedas, pudo detectarse el total en escena de una manera correcta. No obstante, en ocasiones por la iluminación del entorno de pruebas y los cambios en la misma, el resultado podía variar ligeramente del total real (2,19 €).
+
+<div align="center">
+
+![Detección de monedas sin obstáculos](./images/monedas_no_obstaculos.gif)
+
+</div>
+
+Para el entorno con "obstáculos", se pretendía estudiar si aquellos objetos que podían parecer una moneda (tanto por forma como por color) eran ignorados a la hora de catalogarlos. 
+
+| Prueba 1 | Prueba 2 |
+| :---: | :---: |
+| ![Captura de monedas sin obstáculos 1](./images/monedas_obstaculos_v1.gif) | ![Captura de monedas sin obstáculos 2](./images/monedas_obstaculos_v2.gif) |
+
+Tal y como se puede observar, no se llega a detectar ninguno de los objeto con tonalidades frías, quedando totalmente descartados como monedas. No obstante, el obstáculo color rojizo tiende a ser catalogado en ocasiones como una posible moneda (véase prueba 1), mas no se le asigna valor alguno. También queda presente que un cambio en la iluminación puede hacere que el resultado cambie bruscamente (véase prueba 2 cuando el valor total cambia de 4,XX € a 2,XX €, siendo XX valores decimales).
+
 ## Tarea 2
+
+Para esta tarea, se plantea la extracción de características de las tres imágenes completas de partida con el fin de aprender patrones y posteriormente, identificar las partículas en nuevas imágenes.
+
+Por ello, en primer lugar se establecerá con qué partículas estamos trabajando:
+
+- `FRA`: hace referencia a fragmentos de plástico.
+- `PEL`: hace referencia a pellets.
+- `TAR`: hace referencia a alquitrán.
+
+En primer lugar, se deberá realizar la carga de las imágenes de fragmentos, pellets y alquitrán que se proporciona en el guión práctico.
+
+```
+frag = cv2.imread("./referencia/fragment-03-olympus-10-01-2020.JPG")
+pellet = cv2.imread("./referencia/pellet-03-olympus-10-01-2020.JPG")
+tar = cv2.imread("./referencia/tar-03-olympus-10-01-2020.JPG")
+```
+
+<div align="center">
+
+![Imágenes cargadas](./images/frags_pellets_tar.png)
+
+</div>
+
+Realizada la carga, se procederá al recorte de las imágenes para reducir las zonas que carecen de las ya anteriormente mencionadas partículas. De esta forma, se consigue obtener una zona de búsqueda en la que las partículas se encuentran más concentradas, con apenas espacios sin partículas.
+
+```
+# Recortes de las imágenes con las que trabajamos
+frag_crop = frag[(slice(200, 2750), slice(700, 4250))]
+pellet_crop = pellet[(slice(175, 2400), slice(700, 4100))]
+tar_crop = tar[(slice(350, 2600), slice(900, 3800))]
+```
+
+<div align="center">
+
+![Imágenes recortadas](./images/frags_pellets_tar_cut.png)
+
+</div>
+
+De igual manera, para la segmentación se hará uso de una función denominada `contornos()`. La función convierte la imagen a escala de grises y aplica un desenfoque gaussiano para reducir el ruido. Además, estima un fondo suavizado para el cálculo de la diferencia absoluta entre la imagen y este fondo estimado. A partir de esta referencia, se umbralizará con un umbral de 8 para separar los píxeles del fondo. Finalmente, se procede a la búsqueda de contornos externos, conservando únicamente aquellos que supear un área mínima establecida.
+
+```
+def contornos(img_rgb, escala=1.0):
+    # Gris
+    img = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
+    img = cv2.resize(img, None, fx=escala, fy=escala)
+
+    # Blur
+    img = cv2.GaussianBlur(img, (5, 5), 0)
+
+    # Resta de fondo
+    fondo = cv2.resize(cv2.medianBlur(cv2.resize(img, (400, 300)), 31), img.shape[::-1])
+
+    # Umbral
+    _, bw = cv2.threshold(cv2.absdiff(img, fondo), 8, 255, cv2.THRESH_BINARY)
+
+    # Búsqueda de contornos
+    cs, _ = cv2.findContours(bw, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    return [c for c in cs if cv2.contourArea(c) > 40], bw
+```
+
+Se calcula además una escala común y se aplica a los tres recortes de entrenamiento para aproximar su anchura a la escala de la imagen de test, de modo que las características geométrias sean más comparables.
+
+```
+# Las imágenes de referencia se reducen a una escala parecida a la del test
+escala = 1288 / frag.shape[1]
+print("Escala de reducción: ", escala)
+
+cs_frag, bw_frag = contornos(frag_crop, escala)
+cs_pellet, bw_pellet = contornos(pellet_crop, escala)
+cs_tar, bw_tar = contornos(tar_crop, escala)
+print("Partículas: ", len(cs_frag), len(cs_pellet), len(cs_tar))
+
+```
+
+<div align="center">
+
+![Imágenes escaladas](./images/frags_pellets_tar_scaled.png)
+
+</div>
+
+Asisimo, se deberán de extrar las características geométricas de estas partículas, por lo que se procederá a definir la función `características()`.
+
+Esta función, para cada contorno, obtiene los siguientes 4 descriptores:
+
+- Compacidad: resume cuánto perímetro tiene la partícula en relación con su área.
+
+- Ocupación de la caja: mide que fracción de caja ocupa el contorno.
+
+- Relación de aspecto: establece que valores próximos a 1 indican una caja aproximadamente cuadrada, mientras que valores altos indican una caja de forma alargada.
+
+- Relación de ejes de la elipse: establece que aquellos valores próximos a 1 indican una forma más redondeada, mientras que los valores menores una forma más alargada.
+
+```
+def caracteristicas(c):
+    area, per = cv2.contourArea(c), cv2.arcLength(c, True)
+    x, y, w, h = cv2.boundingRect(c)
+    (_, _), (e1, e2), _ = cv2.fitEllipse(c)
+    return [
+        per**2 / area,              # compacidad
+        area / (w * h),             # área / contenedor
+        max(w, h) / min(w, h),      # ancho / alto
+        min(e1, e2) / max(e1, e2),  # ejes de la elipse
+    ]
+```
+
+Si bien estos atributos extraídos describen la forma sin depender directamente del color, no son suficientes por sí solos para separar fragmentos y pellets. No obstante, ofrecen una representación numérica simple y explicable.
+
+Una vez extraídas las características, se recorrerán los contornos extraídos ded cada imagen y se construyen obteniendo:
+
+- X: matriz de características geométricas, una fila por partícula.
+- y: vector de etiquetas asignadas según la imagen de procedencia.
+
+```
+UMBRAL_TAR = 0.6
+
+X, y = [], []
+for cs, clase in [(cs_frag, "FRA"), (cs_pellet, "PEL"), (cs_tar, "TAR")]:
+    for c in cs:
+        X.append(caracteristicas(c))
+        y.append(clase)
+X, y = np.array(X), np.array(y)
+```
+
+Asimismo y debido a que el alquitrán tiende a ser visualmente más oscuro que el fondo, se definirá una nueva función llamada `oscuridad()`.
+
+Dicha función, crea una máscara rellena del contorno. Una vez creada, se dilata la misma y se calcula una región exterior que evita parte de los píxeles cercanos al borde. A continuación, obtiene los píxeles interiores de la partícula para calcuular su intensidad media (escala de grises) y posteriormente, se selecciona el 30% más oscuro de los píxeles interiores para representar el núcleo oscuro. Finalmente, se comparará la intensidad de ese núcleo con la intensidad media del fondo exterior.
+
+```
+def oscuridad(img, c):
+    mask = np.zeros(img.shape[:2], np.uint8)
+    cv2.drawContours(mask, [c], -1, 255, -1)
+    fuera = cv2.bitwise_not(cv2.dilate(mask, np.ones((15, 15), np.uint8)))
+    dentro = img[mask > 0].astype(float)
+    gris = dentro.mean(1)
+    nucleo = dentro[gris <= np.percentile(gris, 30)].mean(0)
+    return (nucleo / img[fuera > 0].mean(0)).mean()  # 1 = como el fondo, 0 = negro
+```
+
+La razón obtenida establece que un valor cercano a 1 indica una intensidad similar al fondo, mientras que uno cercano a 0 una región muy oscura. Se hará uso además de la variable UMBRAL_TAR para comprobar si `oscuridad` es menor al umbral establecido. En dicho caso, se predecirá como `TAR`.
+
+Una vez se han extraído las partículas geométricas de las partículas, se hará uso de estas para distinguir entre fragmentos y pellets (se excluye TAR, puesto que esta distinción ya la realiza `oscuridad`).
+
+En primer lugar, se calculará la media  y desviación típica de cada una de las características haciendo uso de las muestras de entrenamiento de estas partículas. De esta forma, se normalizarán las características y se evitará que aquellas cuyos valores numéricos sean muy elevados influyan de manera desproporcional en la clasificación.
+
+Posteriormente, se calcula un prototipo para clase definido como la media de sus características normalizadas. De esta forma, se podrá clasificar cada partícula comparando su representación geométric acon los prototipos de ambas categorías.
+```
+clases = ["FRA", "PEL"]
+x2, y2 = X[y != "TAR"], y[y != "TAR"]
+mu, sd = x2.mean(0), x2.std(0)
+medias = [((x2[y2 == k] - mu) / sd).mean(0) for k in clases]
+```
+
+Una vez se han definido los prototipos, se implementa la función `predice()` para realizar la predicción. Se comprobará en primera instancia si esta es alquitrán y, en caso contrario, se calcularán sus características normalizadas para compararlas con los prototipos de framentos y pellets mediante distancia euclídea.
+
+```
+def predice(img, c):
+    if oscuridad(img, c) < UMBRAL_TAR:
+        return "TAR"
+    f = (np.array(caracteristicas(c)) - mu) / sd
+    return clases[np.argmin([np.linalg.norm(f - m) for m in medias])]
+```
+
+Con el clasificador anterior definido, se procederá a cargar la [imagen de test](./test/MPs_test.jpg). Con la imagen cargada se ejecutará la función `contornos()`, de modo que esta retornará las partiículas detectadas (`cs_test`) y la máscara binaria correspondiente (`bw_test`).
+
+```
+test = cv2.cvtColor(cv2.imread("./test/MPs_test.jpg"), cv2.COLOR_BGR2RGB)
+cs_test, bw_test = contornos(test)
+```
+
+<div align="center">
+
+![Imagen de test con contornos](./images/test_image_loaded.png)
+
+</div>
+
+Para evaluar el funcionamiento, se hará uso del [archivo CSV](./test/MPs_test_bbs.csv) proporcionado en el guión práctico, el cual contiene las anotaciones de las partículas de la imagen de test. De cada anotación, se obtendrán tanto la etiqueta real como las coordenadas de su caja delimitadora.
+
+A partir de estas últimas se calculará el centro de cada caja de modo que se use este para buscar el contorno detectado que presente la mayor proximidad al centro de rotación. Así, una vez encontrado el contorno, se aplicará la función `predice()` definida anteriormente.
+
+```
+anot = []
+with open("./test/MPs_test_bbs.csv", newline="") as file:
+    for fila in csv.DictReader(file):
+        anot.append(
+            (
+                fila["label"],
+                int(fila["x_min"]),
+                int(fila["y_min"]),
+                int(fila["x_max"]),
+                int(fila["y_max"]),
+            )
+        )
+colores = {"FRA": (255, 0, 0), "PEL": (0, 255, 0), "TAR": (0, 0, 255)}
+img_anot, img_pred = test.copy(), test.copy()
+real, pred = [], []
+for etiqueta, x_min, y_min, x_max, y_max in anot:
+    centro = ((x_min + x_max) / 2, (y_min + y_max) / 2)
+    c = max(cs_test, key=lambda c: cv2.pointPolygonTest(c, centro, True))
+    p = predice(test, c)
+    real.append(etiqueta)
+    pred.append(p)
+    cv2.rectangle(img_anot, (x_min, y_min), (x_max, y_max), colores[etiqueta], 2)
+    cv2.drawContours(img_pred, [c], -1, colores[p], 2)
+```
+
+<div align="center">
+
+![Lectura archivo CSV](./images/csv_image.png)
+
+</div>
+
+Finalmente, una vez obtenidas las etiquetas reales y las predicciones se procederá a evaluar el rendimiento del sistema mediante la tasa de acierto y la precisión ponderada.
+
+La tasa de acierto representa la proporción de partículas cuya etiqueta real coincide con la clase predicha, mientras que la precisión ponderada calcula la precisión de cada clase y obtiene una media ponderada en base al número de muestras pertenecientes a cada categoría.
+
+Con esta información, se construirá una matriz de confusión, en la cual las filas representan las clases reales y las columnas las clases predichas.
+
+```
+accuracy = accuracy_score(real, pred)
+precision = precision_score(real, pred, average="weighted", zero_division=0)
+
+print("\nMÉTRICAS:")
+print(f"Tasa de acierto  = {accuracy:.3f}")
+print(f"Precisión = {precision:.3f}")
+
+clases = ["FRA", "PEL", "TAR"] # Se define TAR antes de hacer la matriz de confusión
+cm = confusion_matrix(real, pred, labels=clases)
+```
+
+<div align="center">
+
+![Matriz de confusión](./images/matriz_de_confusion.png)
+
+</div>
+
+## Uso de la IA
+
+En el desarrollo de esta práctica se ha hecho uso de herramientas de IA de forma complementaria para el desarrollo de algunas tareas. 
+
+Algunas de los aspectos de esta entrega en las que se hizo uso de IA han sido:
+
+- Desarrollo de la función de análisis cromático: para el análisis del color, se utilizó para ver como abordar el problema de la discriminación por colores (rechazar tonos fríos, establecer los rangos de color de las monedas...) de manera que pudieran obtenerse resultados exitosos.
+
+- Función de estabilización en la detección de los fotogramas: originalmente no se trataba de ninguna forma la visión de las monedas en cada fotograma, por lo que cada en cada frame se trataba la moneda como una nueva aparición, lo que hacía el dibujado de los círculos sobre estas algo inestable. Es por ello que con ayuda de herramientas como Claude y ChatGPT se diseñó una solución para tratar de paliar este problema en la mayor magnitud posible.
+
 
 ## Fuentes consultadas
 
