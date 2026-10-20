@@ -420,7 +420,7 @@ Asimismo, para la realización de las pruebas se hiizo uso del siguiente conjunt
 
 | Captura a 15 centímetros | Captura a 39 centímetros |
 | :---: | :---: |
-| ![Captura de escena a 15 centímetros](./images/monedas_otro_pov.gif) | ![Captura de escena a 39 centímetros](./images/monedas_no_obstaculos.gif) |
+| ![Captura de escena a 15 centímetros](./images/monedas_otro_pov.gif) | ![Captura de escena a 39 centímetros](./images/Monedas_no_obstaculos.gif) |
 
 Cuando se realizaba la detección se podía notar como la imagen se deformaba más que cuando se colaba en un punto fijo (en este caso, agarrada a un monitor). Por ello, se tomó la decisión de que el resto de pruebas se realizarían con la cámara posicionada en dicho lugar.
 
