@@ -1,4 +1,4 @@
-# Práctica 3. Funciones básicas de OpenCV
+# Práctica 3. Detección y reconocimiento de formas
 
 ## Tabla de contenidos
 - [Introducción](#introduccion)
