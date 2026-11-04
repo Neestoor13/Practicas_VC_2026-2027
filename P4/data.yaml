@@ -1,0 +1,7 @@
+path: ./VC_Plates_dataset
+train: train/images
+val: val/images
+test: test/images
+
+nc: 1  # número de clases
+names: ['plate']  # nombre de las clases

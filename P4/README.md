@@ -21,3 +21,4 @@ En el cuaderno VC_P4 correspondiente a la [cuarto práctica de la asignatura](ht
 
 - [Documentación de OpenCV](https://docs.opencv.org/4.13.0/d6/d00/tutorial_py_root.html)
 - [Documentación de numpy](https://numpy.org/doc/stable/reference/module_structure.html)
+- [Vídeo sobre labelme](https://www.youtube.com/watch?v=HiW3qeJVQCg)
