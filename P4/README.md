@@ -141,7 +141,7 @@ yolo detect train data=data.yaml model=yolo11n.pt imgsz=416 batch=4 device=cpu e
 
 - Las tres pérdidas de entrenamiento descienden de forma continua: `box_loss` de 1,6X a 0,7X, `cls_loss` de 6,6X a 0,47 aproximadamente y `dfl_loss` de 1,3X a 0,9X. La gráfica pérdida de clasificación converge muy rápido (alrededor de la época 10 aproximadamente), mientras que `box_loss` y `dfl_loss` siguen decreciendo al final, lo cual indica que el modelo podría seguir ajustando la localización con un número mayor de épocas.
 
-- Las pérdidas de validación también bajan, pero son mucho más ruidosas, presentando picos puntuales en las épocas 6 y 22. Es un resultado esperable debido al reducidoconjunto de validación (de solo 43 imágenes) y un batch de 4.
+- Las pérdidas de validación también bajan, pero son mucho más ruidosas, presentando picos puntuales en las épocas 6 y 22. Es un resultado esperable debido al reducido conjunto de validación (de solo 43 imágenes) y un batch de 4.
 
 - Hay una brecha entre entrenamiento y validación en la pérdida de caja. Es una ligera señal de sobreajuste, pero la pérdida de validación sigue una tendencia descendente y las métricas no empeoran, por lo que no es preocupante.
 
@@ -153,11 +153,11 @@ yolo detect train data=data.yaml model=yolo11n.pt imgsz=416 batch=4 device=cpu e
 
 - **Precisión:** se mantiene entre 0,90 y 0,99 y termina en 0,926.
 
-- **Recall:** crece de forma más lenta, con un máximo de aproximdamanete 0,90 hacia la época 30. Es inferior a la precisión: el modelo es conservador y deja escapar en torno al 14 % de las matrículas, pero comete pocos falsos positivos.
+- **Recall:** crece de forma más lenta, con un máximo de aproximadamente 0,90 hacia la época 30. Es inferior a la precisión: el modelo es conservador y deja escapar en torno al 14 % de las matrículas, pero comete pocos falsos positivos.
 
 - **mAP50-95:** sigue una tendencia ascendente hasta el final. A diferencia del mAP50, que se satura pronto, esto indica que el ajuste fino de las cajas seguía mejorando.
 
-Con estas observaciones, se puede concluir que el entrenamiento converge de manera estable tras un arranque inestable. El detector localiza bien la matrícula (mAP50 > 0,9), pero el ajuste preciso de la caja y el recall son sus puntos más débiles. Una forma de conseguir mejoría podría ser entrenar el modelocon más épocas, con un batch mayor o con más datos de validación.
+Con estas observaciones, se puede concluir que el entrenamiento converge de manera estable tras un arranque inestable. El detector localiza bien la matrícula (mAP50 > 0,9), pero el ajuste preciso de la caja y el recall son sus puntos más débiles. Una forma de conseguir mejoría podría ser entrenar el modelo con más épocas, con un batch mayor o con más datos de validación.
 
 #### Funciones auxiliares del CSV
 
@@ -208,6 +208,10 @@ def pixelate(frame, box, factor=10):
     frame[y1:y2, x1:x2] = cv2.resize(small, (rw, rh), interpolation=cv2.INTER_NEAREST)
 ```
 
+| Pixelado de persona | Pixelado de matrícula |
+| :---: | :---: |
+| ![Pixelado de persona](./assets/people_pixelated.png) | ![Pixelado de matrícula](./assets/car_pixelated.png) |
+
 **Cálculo del flujo**: un objeto cuenta como "salida" si lleva más de `lost_frames` fotogramas sin verse, tiene historial suficiente y su última posición está cerca de un borde lateral.
 
 ```python
@@ -229,6 +233,10 @@ def update_exits(current_frame):
                 exit_count[d][track_class[tid]] += 1
                 counted_exit.add(tid)
 ```
+<div align="center">
+    <img src="./assets/flow_detection.gif">
+    <p>El flujo aumenta al salir una clase por los laterales</p>
+</div>
 
 Otras funciones: `draw` (caja con etiqueta), `draw_panel` (panel semitransparente) y `render` (paneles de **DETECCIONES** y **FLUJO**).
 
@@ -264,11 +272,35 @@ Salidas: `output.mp4` y `detections.csv`.
     <p>Muestra del vídeo con la detección YOLOv11.</p>
 </div>
 
+#### Recuento de las detecciones
+
+En el bucle principal de procesado, se produce además de la anonimización y el cálculo de flujo el recuento de detecciones totales en el vídeo. Para ello, el total de cada clase cuenta identificadores de seguimiento únicos, no detecciones por fotograma: un mismo coche que aparece en muchos fotogramas cuenta una sola vez.
+
+Para cada detección, se aumentará el contador asignado a esta situado (véase el presente GIF).
+
+<div align="center">
+    <img src="./assets/detection_count.gif">
+    <p>Aumento de las detecciones al encontrar una nueva</p>
+</div>
+
 ### Detección con RT-DETR
 
 #### Entrenamiento
 
-Mismo dataset (`data.yaml`) para poder comparar. Se puede entrenar por línea de comandos (`rtdetr-l.pt`, `imgsz=416`, `epochs=40`, mismos hiperparámetros de aumento) o alternativamente se podría realizar desde el notebook:
+**Entrenamiento 1**
+
+Mismo dataset (`data.yaml`) para poder comparar. Se puede entrenar por línea de comandos (`rtdetr-l.pt`, `imgsz=416`, `epochs=40`, mismos hiperparámetros de aumento) o alternativamente se podría realizar desde el notebook.
+
+Al igual que para YOLO, se han establecido los mismos valores en los parámetros (tanto de número de épocas como data augmentation) para enfrentar a ambos modelos al mismo escenario.
+
+```bash
+# GPU (CUDA)
+yolo detect train data=data.yaml model=rtdetr-l.pt imgsz=416 batch=4 device=0 epochs=40 project=rtdetr_runs name=plates_detection exist_ok=True hsv_h=0.015 hsv_s=0.5 hsv_v=0.3 degrees=5 translate=0.1 scale=0.3 fliplr=0.0 mosaic=0.5
+
+# CPU
+yolo detect train data=data.yaml model=rtdetr-l.pt imgsz=416 batch=4 device=cpu epochs=40 project=rtdetr_runs name=plates_detection exist_ok=True hsv_h=0.015 hsv_s=0.5 hsv_v=0.3 degrees=5 translate=0.1 scale=0.3 fliplr=0.0 mosaic=0.5
+```
+
 
 ```python
 data_yaml = "./data.yaml"
@@ -292,7 +324,7 @@ rtdetr_metrics = RTDETR(rtdetr_plate_path).val(data=data_yaml, imgsz=640, verbos
 
 - Las tres pérdidas de entrenamiento descienden de forma sostenida: `giou_loss` de 0,7X a 0,2X, `cls_loss` de 11,XX a 0,3X y `l1_loss` de 0,35 a 0,07. La pérdida de clasificación colapsa en las primeras épocas y las de caja (GIoU y L1) siguen decreciendo hasta el final, sin conseguir llegar a estabilizarse.
 
-- **Las pérdidas de validación no están disponibles en 20 de las 40 épocas** (valores `NaN` en el `results.csv`, de ahí los huecos de las gráficas). Se investigará la causa de estos valores perdidos.
+- **Las pérdidas de validación no están disponibles en 20 de las 40 épocas** (valores `NaN` en el `results.csv`, de ahí los huecos de las gráficas). Se estudiará la causa de estos valores perdidos.
 
 - En las épocas disponibles, la pérdida de validación parte de valores bajos, tiene un pico en la época 6 (GIoU 1,0) y después se estabiliza en torno a 0,3 (GIoU), 0,4 (clasificación) y 0,075 (L1). La de clasificación sube algo al final mientras la de entrenamiento sigue bajando, una ligera señal de sobreajuste que no se refleja en las métricas.
 
@@ -309,6 +341,50 @@ rtdetr_metrics = RTDETR(rtdetr_plate_path).val(data=data_yaml, imgsz=640, verbos
 - **mAP50-95:** alcanza el máximo sobre la época 28 y termina en 0,694, sin llegar a mejorar en las últimas épocas.
 
 En conclusión, el modelo RT-DERT parte de mejores métricas y llega a un mAP50-95 más alto que YOLOv11n, con mayor recall, pero su entrenamiento es menos estable: en la fase inicial las métricas se hunden y recuperan, y oscilan en la fase intermedia. La precisión es algo menor que la de YOLO y fluctúa más. Con un batch de solo 4 y un conjunto de validación tan pequeño, era esperable que en un modelo basado en transformadores presentase estas oscilaciones.
+
+**Entrenamiento 2**
+
+Debido a las inusualidades detectadas en las métricas anteriores, se ha revisado el comando de entrenamiento utilizado y se ha propuesto llevar a cabo un nuevo entrenamiento.
+
+Para este nuevo entrenamiento, se modificó levemente el comando y tratar de seguir manteniendo una comparativa justa.
+
+```
+yolo detect train data=data.yaml model=rtdetr-l.pt imgsz=416 batch=8 device=0 epochs=40 optimizer=AdamW lr0=0.0001 project=rtdetr_runs name=plates_detection_lr1e-4 exist_ok=True hsv_h=0.015 hsv_s=0.5 hsv_v=0.3 degrees=5 translate=0.1 scale=0.3 fliplr=0.0 mosaic=0.5
+```
+
+Se ha modificado principalmente el tamaño del batch de 4 a 8, debido a la sensibilidad de los transformers, así como se hamodificado el valor del `optimizer`, ya que el valor asignado automáticamente era demasiado alto para un transformer (afectando de esta forma al modelo).
+
+<div align="center">
+
+![Resultado del entrenamiento con RT-DETR](./runs/detect/rtdetr_runs/plates_detection_v2/results.png)
+
+</div>
+
+**Funciones de pérdida**
+
+- El entrenamiento es estable: no hay valores `nan` ni `inf` y las pérdidas bajan sin divergir. `giou_loss` pasa de ≈1,37 a ≈0,14 y `l1_loss` de ≈0,77 a ≈0,05. `cls_loss` arranca en ≈12 (cabeza de clasificación nueva) y se estabiliza en ≈1,5.
+
+- En validación, `giou_loss` y `l1_loss` bajan hasta ≈0,23 y ≈0,06 y se estabilizan. Cuando el modelo asocia una consulta a una matrícula, la caja que predice es buena.
+
+- `val/cls_loss` es la pérdida problemática: sube de ≈0,5 a ≈2,15 en la época 5 y desciende lentamente hasta ≈1,48 sin llegar a estabilizarse. Su valor no es comparable con el `cls_loss` de YOLO, porque las dos arquitecturas definen esta pérdida de forma distinta.
+
+**Métricas de validación**
+
+- **Precisión:** crece de forma casi continua desde la época 12, pero termina en solo ≈0,08.
+
+- **Recall:** llega a ≈0,98 hacia la época 13 y después cae hasta ≈0,42. Es compatible con un modelo que al principio propone muchas cajas (recall alto, precisión nula) y que, al aprender a discriminar, se vuelve más selectivo antes de haber aprendido a puntuar bien las matrículas reales.
+
+- **mAP50 y mAP50-95:** terminan en ≈0,145 y ≈0,097, con un retroceso hacia la época 18 (≈0,04 y ≈0,03). Todas las métricas **seguían subiendo en la última época**, de modo que el modelo no ha convergido.
+
+En comparación a YOLO se nota un rendimiento más bajo, debiéndose a lo expuesto a continuación:
+
+1. **Convergencia lenta de los detectores tipo DETR.** Necesitan muchas más épocas que los convolucionales; sobre COCO se entrenan con cientos de miles de imágenes. Con 40 épocas y un dataset pequeño, el modelo se queda corto.
+
+2. **Pocas actualizaciones de pesos.** Con `nbs=64` por defecto y `batch=8`, Ultralytics acumula gradientes y actualiza los pesos cada 8 lotes, lo que deja muy pocos pasos de optimización en 40 épocas.
+
+3. **Tamaño del modelo frente al dataset.** ≈32 M de parámetros frente a ≈2,6 M de YOLO, con un conjunto de entrenamiento pequeño.
+
+4. **Aumento de datos.** Mosaico, escala y rotación han hecho la tarea más difícil, lo que ha ralentizado aún más la convergencia de un modelo que ya converge despacio.
 
 #### Procesado del vídeo
 
@@ -348,6 +424,17 @@ def validate(model, name):
     }
 ```
 
+| Modelo | Precisión | Recall | F1 | mAP50 | mAP50-95 |
+|---|---|---|---|---|---|
+| YOLOv11n | 0,921 | 0,929 | 0,925 | 0,946 | 0,654 |
+| RT-DETR-L | 0,075 | 0,620 | 0,134 | 0,117 | 0,089 |
+
+- YOLOv11n es claramente mejor en todas las métricas.
+- RT-DETR no ha convergido: con precisión 0,075 y recall 0,62, propone muchas cajas de baja confianza que no son matrículas.
+- El tiempo de inferencia varió entre ejecuciones (YOLO 1,8-8,6 ms; RT-DETR 16,9-19,0 ms), por lo que solo se puede concluir que RT-DETR es varias veces más lento.
+
+RT-DETR no llegó a converger en las 40 épocas: sus métricas seguían mejorando en la última, lo que indica que el modelo estaba infraentrenado. Es probable que influyan la tasa de aprendizaje utilizada (1e-4, muy inferior a la que Ultralytics elegiría de forma automática, ≈2e-3), el reducido número de actualizaciones de pesos por época y el tamaño del modelo (32 M de parámetros) frente a un dataset muy pequeño, ya que los transformadores necesitan muchas más épocas que los modelos convolucionales. Sin embargo, esto es una suposición dado que debido a reestriciones temporales no se ha podido llegar a comprobar.
+
 #### Curvas de entrenamiento
 
 Gráficas de mAP50 y mAP50-95 por época a partir del `results.csv` de cada entrenamiento (las curvas PR/F1 y la matriz de confusión ya las guarda Ultralytics en cada carpeta de entrenamiento).
@@ -364,16 +451,34 @@ Calculadas desde los CSV; son **indicadores de comportamiento, no de precisión 
 | `estabilidad_media` | Fracción de fotogramas con matrícula por vehículo |
 | `parpadeos_medios_por_vehiculo` | Veces que la matrícula aparece y desaparece (Si → No) |
 
+La información obtenida de los archivos CSV tras la ejecución es la siguiente:
+
+| Métrica | YOLOv11n | RT-DETR-L |
+|---|---|---|
+| Matrículas detectadas (no únicas) | 1150 | 900 |
+| Tasa de detección de matrícula | 0,180 | 0,141 |
+| Confianza media de la matrícula | 0,717 | 0,328 |
+| Vehículos con matrícula detectada (de 42) | 28 (66,7 %) | 27 (64,3 %) |
+| Estabilidad media | 0,197 | 0,158 |
+
 #### Acuerdo entre modelos
 
 Como las detecciones de vehículos coinciden, se cruzan por `fotograma` + `identificador_tracking`. Se muestra una **tabla de acuerdo** YOLO vs. RT-DETR (Si/No) y el **IoU medio** entre cajas de matrícula cuando ambos detectan.
 
-#### Resumen
+| YOLO \ RT-DETR | No | Si |
+|---|---|---|
+| **No** | 5194 | 51 |
+| **Si** | 301 | 849 |
 
-```python
-summary = pd.concat([val_df.T, video_df], axis=0)
-summary.round(4)
-```
+Cuando ambos detectan matrícula (849 casos), el IoU medio entre cajas es 0,735. YOLO encuentra 301 matrículas que RT-DETR no ve y solo 51 al revés, lo que concuerda con el menor recall de RT-DETR.
+
+#### Conclusiones
+
+- Con el dataset y el entrenamiento disponibles, **YOLOv11n es la mejor opción**: tiene más precisión, más recall y es más rápido.
+
+- Donde ambos detectan, las cajas coinciden bien (IoU 0,735); la diferencia está en cuántas matrículas encuentra cada uno.
+
+- RT-DETR no llegó a converger en las 40 épocase establecidas para ambas situaciones. Sin embargo, esto no demuestra que sea peor como arquitectura, sino que necesita que se realicen más ajustes.
 
 ### Archivos generados
 
