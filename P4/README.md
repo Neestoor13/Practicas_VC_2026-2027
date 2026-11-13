@@ -10,6 +10,14 @@
     - [Detección con RT-DETR](#detección-con-rt-detr)
     - [Comparativa YOLO vs. RT-DETR](#comparativa-yolo-vs-rt-detr)
 - [Parte B](#parte-b-lectura-de-matrículas-ocr-easyocr-vs-smolvlm2)
+    - [Descripción](#descripción-1)
+    - [Carga de modelos](#carga-de-modelos)
+    - [Funciones de inferencia](#funciones-de-inferencia)
+    - [Ejecución](#ejecución)
+    - [Estructura del dataset del OCR](#estructura-del-dataset-del-ocr)
+    - [Metrícas](#métricas)
+    - [Resultados obtenidos](#resultados-obtenidos-81-imágenes)
+    - [Vídeo con OCR](#vídeo-con-ocr)
 - [Acceso a recursos](#acceso-a-recursos)
 - [Fuentes consultadas](#fuentes-consultadas)
 
@@ -251,6 +259,10 @@ if cls in PLATE_VEHICLES:
 ```
 
 Salidas: `output.mp4` y `detections.csv`.
+<div align="center">
+    <img src="./assets/YOLO.gif">
+    <p>Muestra del vídeo con la detección YOLOv11.</p>
+</div>
 
 ### Detección con RT-DETR
 
@@ -313,6 +325,11 @@ Este bucle es una versión simplificada (sin pixelado ni panel de flujo): mantie
 
 Salidas: `output_rtdetr.mp4` y `detections_rtdetr.csv`.
 
+<div align="center">
+    <img src="./assets/RT-DETR.gif">
+    <p>Muestra de la salida del vídeo con la detección RT-DETR.</p>
+</div>
+
 ### Comparativa YOLO vs. RT-DETR
 
 #### Métricas de validación
@@ -366,13 +383,11 @@ summary.round(4)
 | `output_rtdetr.mp4` / `detections_rtdetr.csv` | Vídeo y CSV con RT-DETR |
 | `runs/detect/yolo_runs/...` / `runs/detect/rtdetr_runs/...` | Entrenamientos y pesos `best.pt` |
 
----
-
 ## Parte B. Lectura de matrículas (OCR): EasyOCR vs. SmolVLM2
 
 ### Descripción
 
-Continuación de la práctica 4. Partiendo de las matrículas detectadas con **RT-DETR**, se lee su texto con dos alternativas y se comparan en **tiempo de inferencia y acierto**:
+Continuación de la práctica 4 en un nuevo notebook [P4b_main](./P4b_main.ipynb). Partiendo de las matrículas detectadas con **RT-DETR**, se lee su texto con dos alternativas y se comparan en **tiempo de inferencia y acierto**:
 
 | Modelo | Tipo | Descripción |
 |---|---|---|
@@ -409,7 +424,7 @@ vlm_model = (
 
 Para que la comparación sea justa, **ambos modelos reciben el mismo preprocesado** (ampliación ×2 con interpolación cúbica) y **la misma normalización** de la salida (mayúsculas, solo `A-Z0-9`).
 
-### Preprocesado, normalización y distancia de Levenshtein
+#### Preprocesado, normalización y distancia de Levenshtein
 
 ```python
 SCALE = 2
@@ -432,7 +447,7 @@ def lev(a, b):   # distancia de edición, base del CER
     return prev[-1]
 ```
 
-### EasyOCR
+#### EasyOCR
 
 Restringe los caracteres permitidos con `allowlist` y mide solo el tiempo de la inferencia.
 
@@ -445,7 +460,7 @@ def infer_easyocr(img):
     return text, (time.perf_counter() - start) * 1000
 ```
 
-### SmolVLM2
+#### SmolVLM2
 
 El prompt pide específicamente leer la matrícula y responder solo con letras y dígitos; la generación se limita a 15 tokens.
 
@@ -522,7 +537,63 @@ for name, crop in crops.items():
 
 **Condiciones del experimento:** 81 imágenes del conjunto de validación, mismos recortes, mismo preprocesado y normalización, calentamiento previo, GPU NVIDIA GeForce RTX 5070 Laptop (8 GB), Python 3.9.21, PyTorch 2.8.0 + CUDA 12.8.
 
----
+### Estructura del dataset del OCR
+
+El dataset del OCR se construye en tres capas: las imágenes con sus cajas, el texto real etiquetado a mano y el resultado de la comparativa.
+
+#### Imágenes y anotaciones (`OCR_Dataset/val/`)
+
+```
+OCR_Dataset/
+└── val/
+    ├── images/   → fotografías (.jpg, .jpeg, .png)
+    └── labels/   → un .txt por imagen, con el mismo nombre
+```
+
+Cada `.txt` está en formato YOLO y la primera línea contiene la caja de la matrícula, con coordenadas normalizadas (0-1):
+
+```
+clase  cx  cy  ancho  alto
+```
+
+Solo trae la **posición** de la matrícula, no su texto; por eso hace falta el etiquetado manual.
+
+#### Texto real (`ground_truth.csv`)
+
+| Columna | Descripción |
+|---|---|
+| `imagen` | Nombre del archivo de la imagen |
+| `texto` | Matrícula real escrita a mano, normalizada (mayúsculas, solo `A-Z0-9`) |
+ 
+Las imágenes ilegibles no se incluyen. Se etiquetaron **81** matrículas.
+
+#### Resultados de la comparativa (`comparativa_ocr.csv`)
+
+Una fila por imagen evaluada (81 filas) y seis columnas:
+
+| Columna | Tipo | Descripción |
+|---|---|---|
+| `Imagen` | texto | Nombre del archivo de la imagen (clave que enlaza con `ground_truth.csv`) |
+| `Texto_Real` | texto | Matrícula real etiquetada a mano (*ground truth*) |
+| `Texto_EasyOCR` | texto | Matrícula leída por EasyOCR, ya normalizada |
+| `Tiempo_EasyOCR_ms` | número | Tiempo de inferencia de EasyOCR en milisegundos |
+| `Texto_SmolVLM2` | texto | Matrícula leída por SmolVLM2, ya normalizada |
+| `Tiempo_SmolVLM2_ms` | número | Tiempo de inferencia de SmolVLM2 en milisegundos |
+
+Las columnas de texto (`Texto_*`) se comparan directamente con `Texto_Real`, y las de tiempo (`Tiempo_*_ms`) alimentan las estadísticas de velocidad. Con ellas se calculan todas las métricas de la sección anterior:
+
+```python
+# Exact match: la lectura coincide exactamente con la real
+(df["Texto_EasyOCR"] == df["Texto_Real"]).mean() * 100
+ 
+# CER: distancia de Levenshtein sobre el total de caracteres reales
+sum(lev(p, r) for p, r in zip(df["Texto_EasyOCR"], df["Texto_Real"])) / df["Texto_Real"].str.len().sum() * 100
+ 
+# Tiempos
+df["Tiempo_EasyOCR_ms"].agg(["mean", "median", "std"])
+```
+
+Además, al tener una fila por imagen, se puede filtrar `df[df["Texto_EasyOCR"] != df["Texto_Real"]]` para revisar **en qué matrículas falla** cada modelo y qué tipo de errores comete (confusión de caracteres como `0/O` o `8/B`, caracteres omitidos o añadidos).
 
 ### Métricas
 
@@ -544,6 +615,19 @@ rows.append({
 ```
 
 Los resultados por imagen se guardan en `comparativa_ocr.csv`. La tabla resumen se muestra con `display(comparativa.round(2))`.
+ 
+### Resultados obtenidos (81 imágenes)
+ 
+| Modelo | Exact match (%) | CER (%) | Tiempo medio (ms) | Tiempo mediana (ms) | Tiempo std (ms) |
+|---|---:|---:|---:|---:|---:|
+| **EasyOCR** | 29.63 | **38.20** | **47.34** | **30.48** | **44.85** |
+| **SmolVLM2** | **32.10** | 39.96 | 512.35 | 447.65 | 161.52 |
+ 
+**Interpretación:**
+ 
+- **Acierto:** la precisión de ambos es baja. SmolVLM2 acierta la matrícula completa en 26 de 81 imágenes frente a 24 de EasyOCR (+2,5 puntos de exact match), pero EasyOCR tiene un CER algo menor (38,20 % frente a 39,96 %). Con una diferencia de solo 2 imágenes y de menos de 2 puntos de CER, **no se puede afirmar que uno lea mejor que el otro**.
+- **Velocidad:** EasyOCR es mucho más rápido: unas 11 veces en tiempo medio (≈47 ms frente a ≈512 ms) y unas 15 veces en mediana (≈30 ms frente a ≈447 ms). Además tiene menor dispersión (std 45 ms frente a 161 ms).
+- **Conclusión:** a igualdad práctica de acierto, EasyOCR es la opción más adecuada, y por eso es la que se usa para procesar el vídeo.
 
 ### Vídeo con OCR
 
@@ -563,19 +647,39 @@ for index, row in detecciones_frame.iterrows():
             cv2.putText(frame, texto_final, (mx1, my1 - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 ```
+<div align="center">
+    <img src="./assets/RT-DETR-OCR.gif">
+    <p>Muestra del vídeo con la detección RT-DETR para objetos y EasyOCR para texto.</p>
+</div>
 
-| Archivo | Tipo | Descripción |
-|---|---|---|
-| `output_rtdetr.mp4` | Entrada | Vídeo de detecciones RT-DETR (práctica 4) |
-| `detections_rtdetr.csv` | Entrada | Detecciones por fotograma |
-| `output_rtdetr_ocr.avi` | Salida | Vídeo con el texto leído superpuesto (XVID) |
-| `detections_rtdetr_ocr.csv` | Salida | CSV con la columna `texto_matricula` rellena |
+### Resumen de archivos generados / usados
+
+| Archivo | Tipo | Parte del notebook | Descripción |
+|---|---|---|---|
+| `OCR_Dataset/val/images/` | Entrada | Etiquetado y ejecución | Imágenes de validación (`.jpg`, `.jpeg`, `.png`) |
+| `OCR_Dataset/val/labels/` | Entrada | Etiquetado y ejecución | Anotaciones YOLO (`.txt`) con la caja real de la matrícula |
+| `ground_truth.csv` | Salida → Entrada | Etiquetado → Ejecución | Texto real etiquetado a mano (`imagen,texto`). Se crea y se amplía al etiquetar, y después se lee para evaluar |
+| `comparativa_ocr.csv` | Salida | Métricas | Lecturas y tiempos de EasyOCR y SmolVLM2 por imagen |
+| `output_rtdetr.mp4` | Entrada | Vídeo con OCR | Vídeo de detecciones RT-DETR (práctica 4) |
+| `detections_rtdetr.csv` | Entrada | Vídeo con OCR | Detecciones por fotograma (práctica 4) |
+| `output_rtdetr_ocr.avi` | Salida | Vídeo con OCR | Vídeo con la matrícula leída superpuesta (XVID) |
+| `detections_rtdetr_ocr.csv` | Salida | Vídeo con OCR | CSV de detecciones con la columna `texto_matricula` rellena |
 
 ## Acceso a recursos
+**Datasets**:
+- [VC_Plates_dataset (parte A)](https://ulpgc-my.sharepoint.com/:u:/r/personal/nestor_deniz102_alu_ulpgc_es/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fnestor%5Fdeniz102%5Falu%5Fulpgc%5Fes%2FDocuments%2F2026%2D2027%2FVC%2FP4%20%2D%20Detecci%C3%B3n%20de%20veh%C3%ADculos%20y%20matr%C3%ADculas%2FDatasets%2FVC%5FPlates%5Fdataset%2Ezip&parent=%2Fpersonal%2Fnestor%5Fdeniz102%5Falu%5Fulpgc%5Fes%2FDocuments%2F2026%2D2027%2FVC%2FP4%20%2D%20Detecci%C3%B3n%20de%20veh%C3%ADculos%20y%20matr%C3%ADculas%2FDatasets&share=cQpoxTqenn0DSLkR1fvUETzpEgUDQDci1e3AlqTc7GTyTc20bA)
+- [OCR_Dataset (parte B)](https://ulpgc-my.sharepoint.com/:u:/r/personal/nestor_deniz102_alu_ulpgc_es/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fnestor%5Fdeniz102%5Falu%5Fulpgc%5Fes%2FDocuments%2F2026%2D2027%2FVC%2FP4%20%2D%20Detecci%C3%B3n%20de%20veh%C3%ADculos%20y%20matr%C3%ADculas%2FDatasets%2FOCR%5FDataset%2Ezip&parent=%2Fpersonal%2Fnestor%5Fdeniz102%5Falu%5Fulpgc%5Fes%2FDocuments%2F2026%2D2027%2FVC%2FP4%20%2D%20Detecci%C3%B3n%20de%20veh%C3%ADculos%20y%20matr%C3%ADculas%2FDatasets&share=cQpudPvzeDooS6%2Dir%2Dx3yPxVEgUDrdGarwizFN5shMmSQYoNiw)
 
+**Vídeos**:
+- [Detección con Yolo](https://ulpgc-my.sharepoint.com/:v:/r/personal/nestor_deniz102_alu_ulpgc_es/_layouts/15/stream.aspx?id=%2Fpersonal%2Fnestor_deniz102_alu_ulpgc_es%2FDocuments%2F2026-2027%2FVC%2FP4%20-%20Detecci%C3%B3n%20de%20veh%C3%ADculos%20y%20matr%C3%ADculas%2FV%C3%ADdeos%2FDetecci%C3%B3n%20con%20YOLO%2Foutput.mp4&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D&share=cQrBpVnKv6yHS7L9lfBaQgaDEgUDd70eTuejHjqhTbqUyd5GIw)
+- [Detección de RT-DETR](https://ulpgc-my.sharepoint.com/:v:/r/personal/nestor_deniz102_alu_ulpgc_es/_layouts/15/stream.aspx?id=%2Fpersonal%2Fnestor_deniz102_alu_ulpgc_es%2FDocuments%2F2026-2027%2FVC%2FP4%20-%20Detecci%C3%B3n%20de%20veh%C3%ADculos%20y%20matr%C3%ADculas%2FV%C3%ADdeos%2FDetecci%C3%B3n%20con%20RT-DETR%2Foutput_rtdetr.mp4&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D&share=cQq78vVZJuRmQbylDh9ieSQ2EgUDKDZifG4Gp8Q1EZ_vcDfl5Q)
+- [Detección de OCR en vivo](https://ulpgc-my.sharepoint.com/:v:/r/personal/nestor_deniz102_alu_ulpgc_es/_layouts/15/stream.aspx?id=%2Fpersonal%2Fnestor_deniz102_alu_ulpgc_es%2FDocuments%2F2026-2027%2FVC%2FP4%20-%20Detecci%C3%B3n%20de%20veh%C3%ADculos%20y%20matr%C3%ADculas%2FV%C3%ADdeos%2FDetecci%C3%B3n%20de%20OCR%20en%20vivo%2Foutput_rtdetr_ocr.mp4&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D&share=cQoiCFqy-sNNT4MYLFTV9nPLEgUDrwk5uzppE3ednoKMJN_tJw)
 
 ## Fuentes consultadas
 
 - [Documentación de OpenCV](https://docs.opencv.org/4.13.0/d6/d00/tutorial_py_root.html)
 - [Documentación de numpy](https://numpy.org/doc/stable/reference/module_structure.html)
+- [Documentación de Ultralytics (YOLOv11 y RT-DETR)](https://docs.ultralytics.com/)
+- [Documentación de EasyOCR](https://www.jaided.ai/easyocr/documentation/)
+- [Documentación de SmolVLM](https://huggingface.co/docs/transformers/model_doc/smolvlm)
 - [Vídeo sobre labelme](https://www.youtube.com/watch?v=HiW3qeJVQCg)
