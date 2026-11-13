@@ -3,15 +3,22 @@
 ## Tabla de contenidos
 - [Introducción](#introduccion)
 - [Pasos previos](#pasos-previos)
+- [Especificaciones del equipo](#Especificaciones-del-equipo)
 - [Parte A](#parte-a-detección-y-seguimiento-de-personas-y-vehículos-y-detección-de-matrículas-yolo-vs-rt-detr)
+    - [Descripción](#descripción)
+    - [Detección con YOLOv11](#detección-con-yolov11)
+    - [Detección con RT-DETR](#detección-con-rt-detr)
+    - [Comparativa YOLO vs. RT-DETR](#comparativa-yolo-vs-rt-detr)
 - [Parte B](#parte-b-lectura-de-matrículas-ocr-easyocr-vs-smolvlm2)
+- [Acceso a recursos](#acceso-a-recursos)
 - [Fuentes consultadas](#fuentes-consultadas)
 
 ## Introducción
 
-En el cuaderno VC_P4 correspondiente a la [cuarto práctica de la asignatura](https://github.com/otsedom/otsedom.github.io/tree/main/VC/P4) se proponen una serie de tareas que deben ser completadas. A continuación, se presenta una explicación de las distintas tareas propuestas y como se han resuelto para completarlas con éxito.
+En el cuaderno VC_P4 correspondiente a la [cuarta práctica de la asignatura](https://github.com/otsedom/otsedom.github.io/tree/main/VC/P4) se proponen una serie de tareas que deben ser completadas. A continuación, se presenta una explicación de las distintas tareas propuestas y como se han resuelto para completarlas con éxito.
 
 ## Pasos previos
+
 Para la [parte A](#parte-a-detección-y-seguimiento-de-personas-y-vehículos-y-detección-de-matrículas-yolo-vs-rt-detr), creamos un entorno en Anaconda llamado VC_P4:
 ```bash
 conda create --name VC_P4 python=3.9.5
@@ -24,7 +31,7 @@ Una vez activado, se instalan los siguientes paquetes:
 ```bash
 pip install ultralytics lap tensorboard faster_coco_eval
 ```
-Inclyendo esto:
+Incluyendo esto:
 ```bash
 conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.6 -c pytorch -c conda-forge
 ```
@@ -42,6 +49,15 @@ E instalamos las dependencias necesarias:
 pip install pytesseract easyocr paddleocr transformers ultralytics paddlepaddle-gpu num2words
 ```
 
+## Especificaciones del equipo
+
+Para la realización de la mayoría de pruebas, en su mayoría las finales, se ha hecho uso de un equipo con las presentes prestaciones:
+
+- `CPU`: AMD Ryzen 7 260 w/ Radeon 780M Graphics (3.80 GHz)
+- `Memoria RAM`: 32GB
+- `Tarjeta Gráfica`: NVIDIA GeForce RTX 5070 Laptop GPU (8 GB)
+- `Sistema Operativo`: Windows 11 Home Versión 26H2
+
 ## Parte A. Detección y seguimiento de personas y vehículos, y detección de matrículas (YOLO vs. RT-DETR)
  
 ### Descripción
@@ -57,6 +73,10 @@ El notebook [P4.ipynb](P4_main.ipynb) procesa un vídeo de tráfico con **YOLOv1
 
 
 ### Detección con YOLOv11
+
+Se realizará una aproximación inicial a la detección de matrículas con YOLOv11.
+
+Para ello se definirán los modelos así como funciones auxiliares de guardado, pixelado y de detección de flujo con el fin de proporcionar una solución que satisfaga el supuesto práctico planteado. Asimismo con la separación de estas funciones del bucle principal, estas podrán ser reutilizadas para el modelo de detección de matrículas [RT-DETR](#detección-con-rt-detr).
 
 #### Configuración y modelos
 
@@ -103,9 +123,58 @@ yolo detect train data=data.yaml model=yolo11n.pt imgsz=416 batch=4 device=0 epo
 yolo detect train data=data.yaml model=yolo11n.pt imgsz=416 batch=4 device=cpu epochs=40 project=yolo_runs name=plates_detection exist_ok=True hsv_h=0.015 hsv_s=0.5 hsv_v=0.3 degrees=5 translate=0.1 scale=0.3 fliplr=0.0 mosaic=0.5
 ```
 
+<div align="center">
+
+![Resultado del entrenamiento con YOLOv11](./runs/detect/yolo_runs/plates_detection/results.png)
+
+</div>
+
+**Funciones de pérdida**
+
+- Las tres pérdidas de entrenamiento descienden de forma continua: `box_loss` de 1,6X a 0,7X, `cls_loss` de 6,6X a 0,47 aproximadamente y `dfl_loss` de 1,3X a 0,9X. La gráfica pérdida de clasificación converge muy rápido (alrededor de la época 10 aproximadamente), mientras que `box_loss` y `dfl_loss` siguen decreciendo al final, lo cual indica que el modelo podría seguir ajustando la localización con un número mayor de épocas.
+
+- Las pérdidas de validación también bajan, pero son mucho más ruidosas, presentando picos puntuales en las épocas 6 y 22. Es un resultado esperable debido al reducidoconjunto de validación (de solo 43 imágenes) y un batch de 4.
+
+- Hay una brecha entre entrenamiento y validación en la pérdida de caja. Es una ligera señal de sobreajuste, pero la pérdida de validación sigue una tendencia descendente y las métricas no empeoran, por lo que no es preocupante.
+
+**Métricas de validación**
+
+- **Inestabilidad inicial:** la precisión cae hasta ≈0,07 en la época 5 y el mAP50 hasta ≈0,05. Es el periodo de calentamiento, con el modelo aún descalibrado.
+
+- **Salto en la época 7-8:** la precisión pasa a ≈0,97 y el mAP50 a ≈0,82, y a partir de la época 14 se estabiliza en torno a 0,91-0,92.
+
+- **Precisión:** se mantiene entre 0,90 y 0,99 y termina en 0,926.
+
+- **Recall:** crece de forma más lenta, con un máximo de aproximdamanete 0,90 hacia la época 30. Es inferior a la precisión: el modelo es conservador y deja escapar en torno al 14 % de las matrículas, pero comete pocos falsos positivos.
+
+- **mAP50-95:** sigue una tendencia ascendente hasta el final. A diferencia del mAP50, que se satura pronto, esto indica que el ajuste fino de las cajas seguía mejorando.
+
+Con estas observaciones, se puede concluir que el entrenamiento converge de manera estable tras un arranque inestable. El detector localiza bien la matrícula (mAP50 > 0,9), pero el ajuste preciso de la caja y el recall son sus puntos más débiles. Una forma de conseguir mejoría podría ser entrenar el modelocon más épocas, con un batch mayor o con más datos de validación.
+
 #### Funciones auxiliares del CSV
 
-El CSV tiene una fila por objeto y fotograma, con las columnas: `fotograma`, `tipo_objeto`, `confianza`, `identificador_tracking`, `x1..y2`, `matricula_en_su_caso`, `confianza_matricula`, `mx1..my2`, `texto_matricula` (esta última se rellena en `P4b`).
+El CSV tiene una fila por objeto y fotograma, con las columnas:
+
+| fotograma | tipo_objeto | confianza | identificador_tracking | x1  | y1  | x2  | y2  | matricula_en_su_caso | confianza | mx1 | my1 | mx2 | my2 | texto_matricula |
+| ----- | ----------- | --------- | -------- | --- | --- | --- | --- | ----- | ---------- | --- | --- | --- | --- | --- |
+|       |             |           |          |     |     |     |     |       |            |     |     |     |     |     |
+
+Una vez se realiza la detección se identifican dos posibles escenarios, variando ligeramente la información almacenada:
+
+- Se detecta matrícula:
+
+| fotogramaa | tipo_objeto | confianza | identificador_tracking | x1  | y1  | x2  | y2  | matricula_en_su_caso | confianza | mx1 | my1 | mx2 | my2 | texto_matricula |
+| ----- | ----------- | --------- | -------- | --- | --- | --- | --- | ----- | ---------- | --- | --- | --- | --- | --- |
+|   10   |       bus      |    0.941       |     1     |  1383   |  92   |   1918  |  457   |  Si     |     0.685       |  1768   |   397  |  1829   |  415   |     |
+
+- No se detecta matrícula:
+
+| fotogramaa | tipo_objeto | confianza | identificador_tracking | x1  | y1  | x2  | y2  | matricula_en_su_caso | confianza | mx1 | my1 | mx2 | my2 | texto_matricula |
+| ----- | ----------- | --------- | -------- | --- | --- | --- | --- | ----- | ---------- | --- | --- | --- | --- | --- |
+|   10   |       car      |    0.806       |     2     |  1311   |  312   |   1386  |  368   |  No     |            |     |     |     |     |     |
+
+En cualquiera de los casos no se producirá la lectura y guardado de la matrícula (se abarcará en la [Parte B](#parte-b-lectura-de-matrículas-ocr-easyocr-vs-smolvlm2)).
+
 
 ```python
 def write_csv_header(path): ...      # crea el CSV con la cabecera
@@ -187,18 +256,11 @@ Salidas: `output.mp4` y `detections.csv`.
 
 #### Entrenamiento
 
-Mismo dataset (`data.yaml`) para poder comparar. Se puede entrenar por línea de comandos (`rtdetr-l.pt`, `imgsz=416`, `epochs=40`, mismos hiperparámetros de aumento) o desde el notebook; esta celda se omite si ya existe `best.pt`:
+Mismo dataset (`data.yaml`) para poder comparar. Se puede entrenar por línea de comandos (`rtdetr-l.pt`, `imgsz=416`, `epochs=40`, mismos hiperparámetros de aumento) o alternativamente se podría realizar desde el notebook:
 
 ```python
 data_yaml = "./data.yaml"
 rtdetr_plate_path = "./runs/detect/rtdetr_runs/plates_detection/weights/best.pt"
-
-if not os.path.exists(rtdetr_plate_path):
-    rtdetr = RTDETR("rtdetr-l.pt")
-    rtdetr.train(data=data_yaml, epochs=1, imgsz=640, batch=8, seed=0,
-                 project="rtdetr_runs", name="plates_detection")
-else:
-    print("Ya existe un modelo RT-DETR entrenado: ", rtdetr_plate_path)
 ```
 
 Validación rápida:
@@ -207,6 +269,34 @@ Validación rápida:
 rtdetr_metrics = RTDETR(rtdetr_plate_path).val(data=data_yaml, imgsz=640, verbose=False)
 # precision, recall, mAP50, mAP50-95
 ```
+
+<div align="center">
+
+![Resultado del entrenamiento con RT-DETR](./runs/detect/rtdetr_runs/plates_detection/results.png)
+
+</div>
+
+**Funciones de pérdida**
+
+- Las tres pérdidas de entrenamiento descienden de forma sostenida: `giou_loss` de 0,7X a 0,2X, `cls_loss` de 11,XX a 0,3X y `l1_loss` de 0,35 a 0,07. La pérdida de clasificación colapsa en las primeras épocas y las de caja (GIoU y L1) siguen decreciendo hasta el final, sin conseguir llegar a estabilizarse.
+
+- **Las pérdidas de validación no están disponibles en 20 de las 40 épocas** (valores `NaN` en el `results.csv`, de ahí los huecos de las gráficas). Se investigará la causa de estos valores perdidos.
+
+- En las épocas disponibles, la pérdida de validación parte de valores bajos, tiene un pico en la época 6 (GIoU 1,0) y después se estabiliza en torno a 0,3 (GIoU), 0,4 (clasificación) y 0,075 (L1). La de clasificación sube algo al final mientras la de entrenamiento sigue bajando, una ligera señal de sobreajuste que no se refleja en las métricas.
+
+**Métricas de validación**
+
+- **Arranque alto:** a diferencia de YOLO, ya en la primera época tiene precisión 0,97, recall 0,84 y mAP50 0,86 (el modelo parte de pesos preentrenados que se adaptan rápido).
+
+- **Fase inestable (épocas 2-9):** las métricas se hunden hasta un mínimo en la época 7 (recall 0,36, mAP50 0,36, mAP50-95 0,21) y se recuperan en la época 10 (mAP50 ≈ 0,90). Es la fase más inestable del entrenamiento; coincide con el pico de pérdida de validación de la época 6.
+
+- **Oscilaciones intermedias (épocas 10-30):** el mAP50 fluctúa entre 0,76 y 0,92 y la precisión entre 0,83 y 0,95.
+
+- **Estabilización:** el recall se queda fijo en 0,92 y el mAP50 en aproximadamente 0,92. Esa meseta tan plana se debe en parte a que el conjunto de validación solo tiene 43 matrículas (el recall avanza en saltos de 0,02) y a que la tasa de aprendizaje ya es muy baja.
+
+- **mAP50-95:** alcanza el máximo sobre la época 28 y termina en 0,694, sin llegar a mejorar en las últimas épocas.
+
+En conclusión, el modelo RT-DERT parte de mejores métricas y llega a un mAP50-95 más alto que YOLOv11n, con mayor recall, pero su entrenamiento es menos estable: en la fase inicial las métricas se hunden y recuperan, y oscilan en la fase intermedia. La precisión es algo menor que la de YOLO y fluctúa más. Con un batch de solo 4 y un conjunto de validación tan pequeño, era esperable que en un modelo basado en transformadores presentase estas oscilaciones.
 
 #### Procesado del vídeo
 
@@ -480,6 +570,9 @@ for index, row in detecciones_frame.iterrows():
 | `detections_rtdetr.csv` | Entrada | Detecciones por fotograma |
 | `output_rtdetr_ocr.avi` | Salida | Vídeo con el texto leído superpuesto (XVID) |
 | `detections_rtdetr_ocr.csv` | Salida | CSV con la columna `texto_matricula` rellena |
+
+## Acceso a recursos
+
 
 ## Fuentes consultadas
 
