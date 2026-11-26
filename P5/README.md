@@ -1,4 +1,4 @@
-Práctica 5. Biometría: Detección y caracterización de caras
+# Práctica 5. Biometría: Detección y caracterización de caras
 
 ## Tabla de contenidos
 - [Introducción](#introduccion)
