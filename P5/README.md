@@ -173,5 +173,8 @@ Si bien se contemplan 8 emociones en el conjunto de datos y en el entrenamiento,
 - [Guión práctico](https://github.com/otsedom/otsedom.github.io/tree/main/VC/P5)
 - [Página de Mediapipe](https://developers.google.com/edge/mediapipe/solutions)
 - [Vídeo sobre Mediapipe](https://www.youtube.com/watch?v=g3rf45w23NI)
+- [Máscara de Joker](https://shopmadmasks.com/persona-5-joker-mask/?srsltid=AY6E963GoES9A16tuPi7xjmLMDBQTtPlgfp7A55ECqfxm7vngUo7-lOp)
+- [Máscara de Panther](https://www.kindpng.com/imgv/JbhRb_persona5-anntakamaki-cat-panther-mask-persona-5-panther/)
+- [Máscara de Violet](https://www.play-asia.com/es/persona-5-royal-replica-mask-violet/13/70jdnt)
 - [Sprites Stardew Valley](https://es.stardewvalleywiki.com/Stardew_Valley_Wiki) (Créditos a Eric Barone, creador del juego)
 - [Emotion Detection: FER - 2013 dataset with 7 emotion types](https://www.kaggle.com/datasets/ananthu017/emotion-detection-fer/data)
