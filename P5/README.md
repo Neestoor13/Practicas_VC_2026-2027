@@ -93,17 +93,24 @@ El funcionamiento de esta ruleta se relata a continuación:
 
 Inspirado en el juego para móviles [Flappy Bird](https://en.wikipedia.org/wiki/Flappy_Bird), este filtro pretende hacer homenaje representando el viaje de Manzanas hacia su hogar. Manzanas (protagonista de este minijuego y NPC de [Stardew Valley Expanded](https://stardew-valley-expanded.fandom.com/wiki/Apples)), alejado del Bosque Junimo, tratará de emprender un viaje de vuelta a su hogar esquivando los diferentes obstáculos que se le presenten en su camino.
 
-<div align="center">
-
-![Filtro de Junimo](./images/junimo_filter.gif)
-
-</div>
 
 Para ayudar a Manzanas en este viaje, se han implementado dos variantes de control:
 
 - **Con la mano:** se utiliza el `HandLandmarker.task` de Mediapipe y se toma como referencia la punta del dedo índice. El personaje sigue la altura del dedo con un suavizado ajustable.
 
-- **Con la nariz:** se utiliza el `FaceLandmarker.tash` y se toma la punta de la nariz. La primera posición detectada se toma como punto neutro, y el desplazamiento respecto a ella se amplifica para que no haga falta mover mucho la cabeza.
+<div align="center">
+
+![Filtro de Junimo con la mano](./images/Junimo_fly_hand.gif)
+
+</div>
+
+- **Con la nariz:** se utiliza el `FaceLandmarker.task` y se toma la punta de la nariz. La primera posición detectada se toma como punto neutro, y el desplazamiento respecto a ella se amplifica para que no haga falta mover mucho la cabeza.
+
+<div align="center">
+
+![Filtro de Junimo con la mano](./images/Junimo_fly_nose.gif)
+
+</div>
 
 En ambos escenarios el personaje solo se mueve en vertical, inclinándose ligeramente el sprite según su volocidad vertical. Asimismo, si no se detectase la mano o la cara, el juego se pausará. 
 
@@ -165,6 +172,10 @@ Con el fin de conseguir este objetivo, se entrenó a los distintos clasificadore
 ```
 
 Si bien se contemplan 8 emociones en el conjunto de datos y en el entrenamiento, a la hora de la clasificación en tiempo real se ha decidido omitir la detección de las emociones `contempt` y `neutral`.
+
+| Demostrador clásico | Demostrador Keras | Demostrador Resnet |
+| :---: | :---: | :---: |
+| ![Demostrador clásico](./images/emotions_classic.gif) | ![Demostrador Keras](./images/emotions_keras.gif) | ![Demostrador Resnet](./images/emotions_resnet.gif) |
 
 
 ## Fuentes consultadas y recursos
