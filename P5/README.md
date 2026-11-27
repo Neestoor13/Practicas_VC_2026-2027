@@ -119,6 +119,53 @@ En lo que respecta a la lógica del minijuego:
 
 ## Detector de emociones en tiempo real
 
+Como segunda propuesta, se ha implementado un detector de emociones en tiempo real que diferencia entre emociones. Asimismo para cada emoción detectada, se asocia un filtro que trata de imitar a las típicas reacciones de juegos como Animal Crossing o personajes anime.
+
+| Inspiración felicidad | Inspiración sorpresa | Inspiración enfado|
+| :---: | :---: | :---: |
+| ![Imagen referencia felicidad](./images/inspiración_felicidad.png) | ![Imagen referencia sorpresa](./images/inspiración_sorpresa.png) | ![Imagen referencia enfado](./images/inspiración_enfado.jpg) |
+
+A continuación, se muestran los efectos asociados a cada emoción contemplada en el clasificador:
+
+| Enfado | Asco | Miedo | Felicidad | Tristeza | Sorpresa |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| ![Efecto enfado](./assets/emotions/angry.png) | ![Efecto asco](./assets/emotions/disgust.png) | ![Efecto miedo](./assets/emotions/fear.png) | ![Efecto felicidad](./assets/emotions/happy.png) | ![Efecto tristeza](./assets/emotions/sad.png) | ![Efecto sorpresa](./assets/emotions/surprise.png) |
+
+Con el fin de conseguir este objetivo, se entrenó a los distintos clasificadores con el dataset de Kaggle [Emotion Detection: FER - 2013 dataset with 7 emotion types](https://www.kaggle.com/datasets/ananthu017/emotion-detection-fer/data). A continuación, se presenta la estructura del mencionado conjunto de datos:
+
+```
+├── dataset/
+│   ├── test/
+│   |   ├── angry/
+│   |   ├── contempt/
+│   |   ├── disgust/
+|   |   ├── fear/
+|   |   ├── happy/
+|   |   ├── neutral/
+|   |   ├── sad/
+│   |   └── surprise/
+│   ├── train/
+│   |   ├── angry/
+│   |   ├── contempt/
+│   |   ├── disgust/
+|   |   ├── fear/
+|   |   ├── happy/
+|   |   ├── neutral/
+|   |   ├── sad/
+│   |   └── surprise/
+│   └── validation/
+|       ├── angry/
+│       ├── contempt/
+│       ├── disgust/
+|       ├── fear/
+|       ├── happy/
+|       ├── neutral/
+|       ├── sad/
+│       └── surprise/
+```
+
+Si bien se contemplan 8 emociones en el conjunto de datos y en el entrenamiento, a la hora de la clasificación en tiempo real se ha decidido omitir la detección de las emociones `contempt` y `neutral`.
+
 
 ## Fuentes consultadas y recursos
 
@@ -127,3 +174,4 @@ En lo que respecta a la lógica del minijuego:
 - [Página de Mediapipe](https://developers.google.com/edge/mediapipe/solutions)
 - [Vídeo sobre Mediapipe](https://www.youtube.com/watch?v=g3rf45w23NI)
 - [Sprites Stardew Valley](https://es.stardewvalleywiki.com/Stardew_Valley_Wiki) (Créditos a Eric Barone, creador del juego)
+- [Emotion Detection: FER - 2013 dataset with 7 emotion types](https://www.kaggle.com/datasets/ananthu017/emotion-detection-fer/data)
